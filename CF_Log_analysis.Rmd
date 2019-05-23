@@ -1,0 +1,284 @@
+---
+title: "CF_log_analysis"
+author: "Peter Euclide"
+date: "July 10, 2018"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(knitr)
+```
+
+
+```{r make combined CF data file}
+
+### This is the approximate script used to generate the "comb_clonelog_files.txt" files. This script loops through clonelog files, and concatinates files together with an addional column indicating the file name. We have provided the summary output of this script in the data folder. 
+
+# tmp <- NULL
+# comb_data <- NULL
+# 
+# cisco_filenames <- read.table("./cisco_CF_log/filenames.txt", header = F)
+# # lib5_samples <- read.table("./cisco_CF_log/lib5_samples.txt")
+# #   lib5_samples$lib <- "lib5"
+# # lib6_samples <- read.table("./cisco_CF_log/lib6_samples.txt")
+# #   lib6_samples$lib <- "lib6"
+# # cisco_libs <- rbind(lib5_samples, lib6_samples)
+# # colnames(cisco_libs) <- c("Filename", "lib")
+# wall_filenames <- read.table("./wall_CF_log/filenames.txt")
+# bt_filenames <- read.table("./brookTrout_CF_log/filenames.txt")
+# 
+# wall_filenames$V1 <- paste("./wall_CF_log/", wall_filenames$V1, sep = "")
+# bt_filenames$V1 <- paste("./brookTrout_CF_log/", bt_filenames$V1, sep = "")
+# # add library info
+# wall_libs <- read.table("./wall_CF_log/library_info.txt", header =T)
+# 
+# 
+# #f <- "AATKI_6031.clonelog"
+# tmp <- NULL
+# comb_data <- NULL
+# for(f in wall_filenames$V1){
+#   tmp <- read.table(f, header = F, skip = 1)
+#   tmp$sample <- gsub(".clonelog", "", basename(f), fixed = T)
+#   comb_data <- rbind(comb_data, tmp)
+# 
+# }
+# 
+# colnames(comb_data) <- c("Num_Clones", "Count", "Filename")
+# comb_data <- left_join(comb_data, wall_libs, by = c("Filename" = "sample"))
+# 
+# write.table(comb_data, "./wall_CF_log/comb_clonelog_files.txt")
+
+
+```
+
+
+```{r CF summary table}
+## read in combined datasets
+
+wall_CF <- read.table("./data/wa_comb_clonelog_files.txt")
+cisco_CF <- read.table("./data/cis_comb_clonelog_files.txt")
+bt_CF <- read.table("./data/bt_comb_clonelog_files.txt")
+sal_CF <- read.table("./data/sal_comb_clonelog_files.txt")
+sal_CF <- sal_CF[,-5]
+wall_CF$species <- "walleye"
+cisco_CF$species <- "cisco"
+bt_CF$species <- "brook trout"
+sal_CF$species <- "chum salmon"
+
+### Filter to only samples used in change analysis
+
+# filter salmon samples 
+sal_samps <- read.table("./data/sal_filt_samples.txt")
+sal_samps$ID <- gsub(".1.combined", "",sal_samps$x, fixed = T)
+sal_CF <- sal_CF %>% filter(Filename %in% sal_samps$ID)
+
+#filter BT samples
+bt_samps <- read.table("./data/bt_filt_samples.txt")
+bt_CF<- bt_CF %>% filter(Filename %in% bt_samps$x)
+
+#filter wall samples
+wall_samps <- read.table("./data/wall_filt_samples.txt")
+wall_CF<- wall_CF %>% filter(Filename %in% wall_samps$x)
+
+#filter cisco samples
+cis_samps <- read.table("./data/cis_filt_samples.txt")
+cis_samps$x <- gsub(".1", "",cis_samps$x, fixed = T)
+cisco_CF <-cisco_CF %>% filter(Filename %in% cis_samps$x)
+
+all_sp_CF <- rbind(wall_CF, cisco_CF, bt_CF, sal_CF)
+
+all_sp_CF$total_clones <- all_sp_CF$Num_Clones*all_sp_CF$Count
+
+total_clones <- all_sp_CF %>% filter (Num_Clones >1) %>% group_by(species) %>% summarise(sum_clones = sum(total_clones))
+
+(average_clones <- all_sp_CF %>% filter (Num_Clones>1) %>%
+  group_by(Filename) %>%
+  summarise(sum_clones = sum(total_clones),
+            species = first(species)) %>%
+  group_by(species) %>%
+  summarise(mean_clones_per_ind = mean(sum_clones),
+            sd_clone_per_ind = sd(sum_clones)))
+
+CF_summary <- left_join(total_clones, average_clones, by = "species")
+
+```
+
+# process_radtags summary
+```{r make combined PR file}
+
+## This script was used to combine multiple process_radtags logs into a single usable file. We have provided the summary output of this script in the data folder. 
+
+# lib5_1 <- read.delim("E:/raw_data_files/cisco/192_inds_snp_dev_5_3_17/brook_trout/log files/log files/BT2_R1R2_process_radtags.log", skip = 12, nrow = 96, header =T, sep = "\t")
+# lib5_2 <- read.delim("E:/raw_data_files/cisco/192_inds_snp_dev_5_3_17/brook_trout/log files/log files/BT2_R2R1_process_radtags.log", skip = 12, nrow = 96, header = T, sep = "\t")
+# lib6_1 <- read.delim("E:/raw_data_files/cisco/192_inds_snp_dev_5_3_17/brook_trout/log files/log files/process_radtags.raw_seq_files_BT_1_R1R2.log", skip = 12, nrow = 96, header =T, sep = "\t")
+# lib6_2 <- read.delim("E:/raw_data_files/cisco/192_inds_snp_dev_5_3_17/brook_trout/log files/log files/process_radtags.raw_seq_files_BT_1_R2R1.log", skip = 12, nrow = 96, header = T, sep = "\t")
+# 
+# 
+# 
+# comb_lib5 <- cbind(lib5_1[,1:2], ((lib5_1[3:6] + lib5_2[,3:6])/2))
+#   comb_lib5$lib <- NA
+# comb_lib6 <- cbind(lib6_1[,1:2], ((lib6_1[3:6] + lib6_2[,3:6])/2)) 
+#   comb_lib6$lib <- NA
+# colnames(comb_lib6) <- colnames(comb_lib5)  
+#   
+# 
+# PR_data <- bind_rows(comb_lib6, comb_lib5)
+
+#write.table(PR_data, "E:/raw_data_files/cisco/192_inds_snp_dev_5_3_17/PR_clonelog_files/bt_PR_data.txt")
+
+
+#PR_data$pop <- gsub("\\_.*","" , comb_dat$Filename)
+
+```
+
+
+```{r PR summary table}
+
+cisco_PR <- read.table("./data/cis_PR_data.txt")
+wall_PR <- read.table("./data/wa_PR_data.txt")
+bt_PR <- read.table("./data/bt_PR_data.txt")
+sal_PR <- read.table("./data/sal_PR_data.txt")
+wall_PR$species <- "walleye"
+cisco_PR$species <- "cisco"
+bt_PR$species <- "brook trout"
+sal_PR$species <- "chum salmon"
+colnames(bt_PR) <- colnames(wall_PR)
+colnames(sal_PR) <- colnames(wall_PR)
+
+
+
+### Filter to only samples used in change analysis
+
+# filter salmon samples 
+
+sal_PR <- sal_PR %>% filter(Filename %in% sal_samps$ID)
+
+#filter BT samples
+
+bt_PR<- bt_PR %>% filter(Filename %in% bt_samps$x)
+
+#filter wall samples
+
+wall_PR<- wall_PR %>% filter(Filename %in% wall_samps$x)
+
+#filter cisco samples
+
+cisco_PR <-cisco_PR %>% filter(Filename %in% comb_calls_dataset$sample)
+
+all_sp_PR <- rbind(wall_PR, cisco_PR, bt_PR, sal_PR)
+
+total_RR <- all_sp_PR %>% group_by(species) %>% summarise(N = length(unique(Filename)),
+                                                          sum_RR = sum(Retained))
+
+(average_RR <- all_sp_PR %>%
+  group_by(Filename) %>%
+  summarise(sum_RR = sum(Retained),
+            species = first(species)) %>%
+  group_by(species) %>%
+  summarise(mean_RR_per_ind = mean(sum_RR),
+            sd_RR_per_ind = sd(sum_RR)))
+
+PR_summary <- left_join(total_RR, average_RR, by = "species")
+
+```
+
+# Table 1: Data overview:
+
+### Total sum of retained reads, average and standard deviation (SD) of retained reads per individual, total number of PCR duplicates (clones), and avereage and standard deviation of PCR duplicates per individual. 
+
+```{r table 1}
+tab1_colnames <- c( "species","N" ,"Total Retained Reads", "Mean Retained Reads", "SD Retained Reads", "Total clones", "Mean clones", "SD clones")
+table1 <- left_join(PR_summary, CF_summary, by = "species")
+kable(table1, col.names = tab1_colnames, digits = 0, format.args = list(big.mark = ","))
+
+# write table
+#write.csv(table1, "../results_tables/table_1.csv", row.names = F)
+
+```
+
+```{r}
+#combine PR_data with comb_data_summary
+PR_clonelog <- left_join(all_sp_PR, all_sp_CF, by = "Filename")
+#drop uneeded columns
+PR_clonelog <- PR_clonelog[,-c(1,7,8)]
+
+# write table
+#write.csv(PR_clonelog, "../results_tables/PR_clonelog.csv")
+```
+
+# Figure 1: Number of PCR duplicates per sequences. 
+
+```{r num_clones by count}
+
+# ggplot(comb_data, aes(x = Num_Clones, y = Count, group = Filename, color = lib.y))+
+#   geom_line(alpha = 0.3)+
+#   scale_color_manual(values=c("#E69F00", "#56B4E9"))+
+#   scale_x_continuous(limits = c(1,10))+
+#   theme_bw()
+
+
+PR_clonelog %>% filter (Num_Clones > 1) %>%
+ggplot(aes(x = Num_Clones, y = Count, group = Filename, color = lib.y))+
+  facet_wrap(vars(species.y))+
+  geom_line(alpha = 0.3)+
+  #scale_color_manual(values=c("#E69F00", "#56B4E9"))+
+  scale_x_continuous(limits = c(2,10))+
+  theme_bw()
+  
+
+
+```
+
+# Figure 2: Relationship between retained reads and number of clones.
+
+```{r number of clones by retained reads}
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+PR_clonelog %>% group_by(Filename) %>% 
+  summarise(sum_clones = sum(total_clones),
+  Retained = first(Retained),
+  species = first(species.y),
+  lib = first(lib.y)) %>%
+  ggplot(aes(x = Retained, y = sum_clones, color = lib))+
+    geom_point(alpha = 0.3)+
+    facet_wrap(vars(species))+
+    scale_x_continuous()+
+    theme_bw()
+
+# 
+# ggplot(PR_clonelog, aes(x = LowQuality, y = sum_clones, color = lib))+
+#   geom_point(alpha = 0.3)+
+#   scale_color_manual(values=c("#E69F00", "#56B4E9"))+
+#   scale_x_continuous()+
+#   theme_bw()
+  
+
+```
+
+
+```{r percent clones by plate, echo = F}
+
+PR_clonelog %>% group_by(Filename) %>% 
+  filter(Num_Clones > 1, Filename != "10B") %>%
+  summarise(sum_clones = sum(total_clones),
+            per_clones =( sum(total_clones)/ first(Retained))*100,
+  Retained = first(Retained),
+  species = first(species.y),
+  lib = first(lib.y)) %>%
+  ggplot( aes(lib, per_clones, fill = species))+
+  geom_boxplot(alpha = .8)+
+  #scale_fill_manual(values =c("#E69F00", "#56B4E9"))+
+  theme_bw()+
+  labs(x = "Library", y = "Percent", title = "A. Percent of retained reads identified as PCR clones by library")+
+  theme(axis.text.x = element_text(size = 16),
+        plot.title = element_text(size = 14),
+        text = element_text(size = 14),
+        legend.position = "none")
+```
+
+

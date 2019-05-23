@@ -1,0 +1,175 @@
+---
+title: "Objective 4: Confirm that clones influence downstream heterozygosity estimates"
+author: "Peter Euclide"
+date: "October 2, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(ggsci)
+library(tidyverse)
+library(broom)
+library(knitr)
+library(ggridges)
+
+# combine chrom and position to create the stacks ID
+make_ID <- function(data){
+  paste(data$Locus.ID, data$Col, sep = "_")
+}
+
+
+
+```
+
+```{r load sumstats}
+# walleye
+wall_CF_sumstats <- read.delim("./data/wal_clone_filtered_batch_1.sumstats.tsv", skip = 1)
+wall_no_CF_sumstats <- read.delim("./data/wal_not_filt_batch_1.sumstats.tsv", skip = 1)
+# create ID
+wall_CF_sumstats$ID <- make_ID(wall_CF_sumstats)
+wall_no_CF_sumstats$ID <- make_ID(wall_no_CF_sumstats)
+
+# Cisco
+cis_CF_sumstats <- read.delim("./data/cis_clone_filtered_batch_1.sumstats.tsv", skip = 1)
+cis_no_CF_sumstats <- read.delim("./data/cis_not_filt_batch_1.sumstats.tsv", skip = 1)
+# create ID
+cis_CF_sumstats$ID <- make_ID(cis_CF_sumstats)
+cis_no_CF_sumstats$ID <- make_ID(cis_no_CF_sumstats)
+
+# brook trout
+bt_CF_sumstats <- read.delim("./data/bt_clone_filtered.sumstats.tsv", skip = 1)
+bt_no_CF_sumstats <- read.delim("./data/bt_not_filt_batch_1.sumstats.tsv", skip = 1)
+# create ID
+bt_CF_sumstats$ID <- make_ID(bt_CF_sumstats)
+bt_no_CF_sumstats$ID <- make_ID(bt_no_CF_sumstats)
+
+# salmon
+sal_CF_sumstats <- read.delim("./data/sal_batch_17_cloneFIltered.sumstats.tsv", skip = 1)
+sal_no_CF_sumstats <- read.delim("./data/sal_batch_17.sumstats.tsv", skip = 1)
+# create ID
+sal_CF_sumstats$ID <- make_ID(sal_CF_sumstats)
+sal_no_CF_sumstats$ID <- make_ID(sal_no_CF_sumstats)
+
+## filter to correct loci and samples
+
+# 1 - load data
+comb_snps_ids <- read.table("./data/comb_snp_IDs.txt")
+
+# 2- filter to snps
+
+# subset to loci used in rest of analysis
+
+# walleye 
+
+wall_CF_sumstats <- wall_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "Walleye","ID"])
+wall_CF_sumstats$filter <- "CF"
+
+wall_no_CF_sumstats <- wall_no_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "Walleye","ID"])
+wall_no_CF_sumstats$filter <- "no_CF"
+wall_comb_het <- rbind.data.frame(wall_no_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")], wall_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")])
+wall_comb_het$species <-  "walleye"
+# cisco 
+
+cis_CF_sumstats <- cis_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "cisco","ID"])
+cis_CF_sumstats$filter <- "CF"
+
+cis_no_CF_sumstats <- cis_no_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "cisco","ID"])
+cis_no_CF_sumstats$filter <- "no_CF"
+cis_comb_het <- rbind.data.frame(cis_no_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")], cis_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")])
+cis_comb_het$species <-  "cisco"
+
+# BrookTrout 
+ ## NOTE: FOR SOMEREASON ONLY 12001 LOCI OVERLAP, SHOULD BE 20495
+bt_CF_sumstats <- bt_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "BrookTrout","ID"])
+bt_CF_sumstats$filter <- "CF"
+
+bt_no_CF_sumstats <- bt_no_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "BrookTrout","ID"])
+bt_no_CF_sumstats$filter <- "no_CF"
+
+bt_comb_het <- rbind.data.frame(bt_no_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")], bt_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")])
+bt_comb_het$species <-  "BrookTrout"
+
+# ChumSalmon
+
+sal_CF_sumstats <- sal_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "ChumSalmon","ID"])
+sal_CF_sumstats$filter <- "CF"
+
+sal_no_CF_sumstats <- sal_no_CF_sumstats %>% filter(ID %in% comb_snps_ids[comb_snps_ids$species == "ChumSalmon","ID"])
+sal_no_CF_sumstats$filter <- "no_CF"
+sal_comb_het <- rbind.data.frame(sal_no_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")], sal_CF_sumstats[,c("ID", "filter", "Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis")])
+sal_comb_het$species <-  "salmon"
+
+
+comb_dataset <- rbind(wall_comb_het, cis_comb_het, bt_comb_het, sal_comb_het)
+```
+
+
+## Diversity estimates summarized across all loci for non-clone filtered and clone filtered data. 
+```{r summary table, echo = F}
+
+kable(comb_dataset %>% group_by(species, filter) %>%
+  summarise_at(c("Obs.Het", "Exp.Het", "Obs.Hom", "Exp.Hom", "Fis"), mean), digits = 3, caption = "Stacks diversity estimates")
+
+
+kable(comb_dataset %>% group_by(species) %>% do(tidy(aov(lm(Obs.Het ~ filter, data = .)))), digits = 4, caption = "ANOVA testing the difference in observed heterozygosity between clone filtered and non-clone filtered (filter) data for each species.") 
+
+
+# % decrease
+
+(sal <- ((0.268-0.262)/0.262)*100)
+(cis <- ((.214-.209)/.209)*100)
+m <- comb_dataset %>% group_by(species, filter) %>% summarize(m = mean(Obs.Het)) %>% spread("filter", "m")
+n <- comb_dataset %>% group_by(species, filter) %>% tally() %>% spread("filter", "n")
+s <- comb_dataset %>% group_by(species, filter) %>% summarize(s = sd(Obs.Het)) %>% spread("filter", "s")
+
+eff_size_tab <- bind_cols(m, n[,c(2,3)], s[,c(2,3)])
+colnames(eff_size_tab) <- c("species", "m1", "m2", "n1", "n2", "s1", "s2")
+eff_size_tab$d <- (eff_size_tab$m1-eff_size_tab$m2)/sqrt(((eff_size_tab$n1-1)*eff_size_tab$s1^2 + (eff_size_tab$n2-1)*eff_size_tab$s2^2)/ (eff_size_tab$n1+eff_size_tab$n2-2)  )
+
+kable(eff_size_tab[,c("species", "d")], caption = "Cohen's D effect size estimate")
+
+
+```
+
+
+
+```{r t tests}
+
+kable(comb_dataset %>% group_by(species) %>% do(tidy(t.test(Obs.Het ~ filter, data = .))), digits = 4, caption = "ANOVA testing the difference in observed heterozygosity between clone filtered and non-clone filtered (filter) data for each species.") 
+
+
+```
+
+
+
+
+```{r}
+# obs_het <- comb_dataset %>% 
+#   ggplot(aes(x = as.numeric(Obs.Het), fill = filter)) +
+#   facet_wrap(vars(species))+
+#   geom_density(alpha = 0.4) +
+#   scale_fill_igv()+
+#   theme_bw()+
+#   labs(x = "Obs. Heterozygosity", y = "Density", title = "A.")+
+#   theme(axis.text.x = element_text(size = 16),
+#         plot.title = element_text(size = 14),
+#         text = element_text(size = 14),
+#         legend.position = "none")
+
+
+
+
+
+ggplot(comb_dataset, aes(y=species)) +
+  stat_density_ridges(aes(x = as.numeric(Obs.Het), fill = filter),geom = "density_ridges_gradient", bandwidth = .025, from = 0, to = 1) +
+  labs(x = "Observed Heterozygosity", y = "Species", title = "Figure 6")+
+  scale_fill_manual(
+    name = "", values = c( "#0000FFA0", "#A0A0A0A0"))+
+  theme_bw()
+
+```
+
+__Fig. 6:__ distribution of observed heterozygosity pre- and post clonefilter across  all loci by species.
+
