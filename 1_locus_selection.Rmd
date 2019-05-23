@@ -364,13 +364,13 @@ NO_CF_parsed_read_depth_filtered_long <- merge(NO_CF_parsed_read_depth_filtered_
 ## the final step was to write filtered and unfiltered datasets for each species to text files for use in analysis.
 
 
-write.table(NO_CF_parsed_genotype_calls_filtered_long, "./walleye/NO_CF_wa_parsed_genotype_calls_filtered_long_1-14-19")
-write.table(CF_parsed_genotype_calls_filtered_long, "./walleye/CF_wa_parsed_genotype_calls_filtered_long_1-14-19")
+write.table(NO_CF_parsed_genotype_calls_filtered_long, "./walleye/NO_CF_wa_parsed_genotype_calls_filtered_long")
+write.table(CF_parsed_genotype_calls_filtered_long, "./walleye/CF_wa_parsed_genotype_calls_filtered_long")
 
-write.table(NO_CF_parsed_read_depth_filtered_long, "./walleye/NO_CF_wa_parsed_read_depth_filtered_long_1-14-19")
-write.table(CF_parsed_read_depth_filtered_long, "./walleye/CF_wa_parsed_read_depth_filtered_long_1-14-19")
+write.table(NO_CF_parsed_read_depth_filtered_long, "./walleye/NO_CF_wa_parsed_read_depth_filtered_long")
+write.table(CF_parsed_read_depth_filtered_long, "./walleye/CF_wa_parsed_read_depth_filtered_long")
 
-write.table(NO_CF_reads_per_allele_RAW_filtered_long, "./walleye/NO_CF_wa_reads_per_allele_RAW_filtered_long_1-14-19")
-write.table(CF_reads_per_allele_RAW_filtered_long, "./walleye/CF_wa_reads_per_allele_RAW_filtered_long_1-14-19")
+write.table(NO_CF_reads_per_allele_RAW_filtered_long, "./walleye/NO_CF_wa_reads_per_allele_RAW_filtered_long")
+write.table(CF_reads_per_allele_RAW_filtered_long, "./walleye/CF_wa_reads_per_allele_RAW_filtered_long")
 
 ```
