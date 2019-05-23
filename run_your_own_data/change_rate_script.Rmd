@@ -1,0 +1,102 @@
+---
+title: "PCR Clone Change Rate Summary"
+author: "Peter Euclide"
+date: "March 4, 2019"
+output: html_document
+---
+
+
+```{r setup, message=FALSE, warning=FALSE}
+
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(vcfR)
+
+
+### combine VCFs function
+# input:a un-clone filtered and clone filtered VCF file with identical sample names built in Stacks Version 1 converted to tidy format in vcfR
+
+combine_VCFs <- function(unfiltered, filtered){
+  
+  # add locus IDs and drop info ---------
+  unfiltered <- unfiltered$gt %>% unite(ID, c(ChromKey, POS), sep = "_")
+  filtered <- filtered$gt %>% unite(ID, c(ChromKey, POS), sep = "_")
+  # find and filter by common loci
+  commonLoci <- intersect(unfiltered$ID, filtered$ID)
+  # generate final datasets
+  unfiltered_genotype_calls <- droplevels(subset(unfiltered[,c("ID", "Indiv", "gt_GT")], ID %in% commonLoci))
+  filtered_genotype_calls <- droplevels(subset(filtered[,c("ID", "Indiv", "gt_GT")], ID %in% commonLoci))
+
+  #combine filtered and unfiltered data.-------
+  full_join(unfiltered_genotype_calls, filtered_genotype_calls, by = c("ID", "Indiv"), suffix = c("_no_CF", "_CF"))
+  
+}
+
+
+```
+
+# Create tidy dataframe with calls from both the un-clone filtered and clone filtered datasets
+
+```{r create test data, message=FALSE}
+# -------- CHANGE THIS TO MATCH YOUR VCF ---------
+
+
+uf_vcf <- read.vcfR( "./no_CF_test_data.vcf", verbose = FALSE )
+f_vcf <- read.vcfR( "./CF_test_data.vcf", verbose = FALSE )
+
+uf_tidy_data <- vcfR2tidy(uf_vcf)
+f_tidy_data <- vcfR2tidy(f_vcf)
+
+
+comb_calls_dataset <- combine_VCFs(unfiltered=uf_tidy_data, filtered=f_tidy_data)
+
+
+```
+
+# Create a new column for call changes
+
+```{r identify call changes}
+
+# Identify call changes
+
+comb_calls_dataset$changeType <- paste(as.character(comb_calls_dataset$gt_GT_no_CF),as.character(comb_calls_dataset$gt_GT_CF), sep = "->")  #define change types
+
+# to make things simple, just change anything that stayed the same to "NO_CHANGE"
+##   call key: 0 = homo A1, 1 = het, 2 = homo A2, -9 = no call
+
+comb_calls_dataset[comb_calls_dataset$changeType %in% c("0/0->0/0",   "0/1->0/1", "1/1->1/1", "NA->NA"),"changeType"] <-  "NO_CHANGE"
+
+
+```
+
+# Create a table of all call changes
+
+```{r table of change type, echo =F}
+
+# table of genotype changes
+change_summary <- comb_calls_dataset %>%
+  group_by(changeType) %>%
+  summarise (count = n()) %>%
+  mutate(percent_of_genotypes = (count / sum(count))*100) %>%
+  arrange(percent_of_genotypes)
+
+
+change_summary
+
+```
+
+# Create a bar plot of change types
+
+```{r change by type, echo = F}
+
+
+(GT_changes_plot <- ggplot(change_summary, aes (x = reorder(changeType, -percent_of_genotypes), y = percent_of_genotypes))+
+  geom_bar(stat="identity")+
+  xlab("Change Type")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+)
+
+```
+
+
