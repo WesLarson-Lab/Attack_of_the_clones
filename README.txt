@@ -18,4 +18,5 @@ Scripts for Objective 3: Causes of genotype change are more complex and were con
 for details please contact Peter Euclide peter.euclide@uwsp.edu, or through GitHub https://github.com/peuclide/
 
 Script sumstats_analysis walks through the analysis conducted to compare sumstat outfiles and changes in heterozygosity in Objective 4: Effect of PCR clones on heterozygosity
-       
+
+Files in the run_your_own_data file is a self contained script that takes two VCF files and creates a simple output that showing the proportion of each change type.        
